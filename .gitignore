@@ -1,0 +1,25 @@
+__pycache__/
+# Картинки, которые рисует demo.py в задачах про изображения
+demo-*.png
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.idea/
+.vscode/
+*.egg-info/
+build/
+dist/
+# Каталог, который создаёт `checker export .` без явного EXPORT_ROOT
+export/
+
+# Claude Code: инструкции, локальные настройки, агенты и MCP-конфиг
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.mcp.json
+.clinerules
+.windsurfrules
+AGENTS.md
+opencode.json

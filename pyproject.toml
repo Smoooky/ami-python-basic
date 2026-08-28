@@ -1,0 +1,78 @@
+# Конфиг курса и его инфраструктуры.
+# Основной источник правды по зависимостям для testenv-образа и для локальной
+# работы препа (checker check, ruff, mypy).
+
+[project]
+name = "ami-python-basic-course"
+version = "0.1.0"
+description = "Инфраструктура курса Базовый Python (АМИ ВШЭ)"
+requires-python = ">=3.14"
+
+# Пустой список рантайм-зависимостей — сам курс не пакет, здесь только tooling.
+dependencies = []
+
+[project.optional-dependencies]
+# test/lint — попадают студентам (public), нужны для запуска локально и в CI.
+#   pip install ".[test]"
+test = [
+  "pytest>=8",
+  "pytest-mock",
+  "pytest-asyncio",
+  "hypothesis>=6",
+  # Нужны задачам лекции 12. Именно в test, а не в lectures: testenv-образ
+  # ставит "/build[test,lint]", и без них grade-джоба этих задач не поднимется.
+  "numpy>=2",
+  "pandas>=2",
+]
+lint = [
+  "ruff>=0.6",
+  "mypy>=1.10",
+  "pandas-stubs",   # без них mypy не видит типов pandas в задачах лекции 12
+]
+# lectures — то, что нужно, чтобы прогнать ноутбуки лекций. Пока это только
+# лекция 12 (NumPy и Pandas); nb_mypy она использует для проверки аннотаций
+# прямо в ячейках. В задачах и в testenv-образе эти пакеты не нужны.
+#   pip install ".[lectures]"
+lectures = [
+  "numpy>=2",
+  "pandas>=2",
+  "nb_mypy",
+]
+# dev — только для препа: локальный прогон checker перед пушом в приватный репо.
+# Студенту не нужен (в CI checker бежит в testenv-образе, там пин через
+# CHECKER_PIP_SPEC в testenv.docker).
+#   pip install ".[test,lint,dev]"
+dev = [
+  "manytask-checker @ git+https://github.com/manytask/manytask.git@main#subdirectory=checker",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# Курс не пакет, только зависимости — модулей для сборки нет.
+py-modules = []
+
+[tool.pytest.ini_options]
+# Фикстура tmp_path создаёт каталоги во временной директории ОС. По умолчанию
+# pytest держит три последних прогона; здесь оставляем только те, где тест упал
+# (нужны для разбора), успешные удаляются сразу после прогона.
+tmp_path_retention_policy = "failed"
+tmp_path_retention_count = 1
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = [
+  "E", "F", "W",   # pycodestyle + pyflakes
+  "I",             # isort
+  "UP",            # pyupgrade
+  "B",             # bugbear
+]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true

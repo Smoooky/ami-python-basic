@@ -1,0 +1,56 @@
+# CI СТУДЕНЧЕСКОГО репо. Тонкий wrapper: вызывает shared workflow `grade`
+# из приватного репо через public cube shared-workflows:latest.
+#
+# Никаких секретов и credentials в этом файле — вся auth в приватном.
+# Как только checker export скопирует этот файл в public — он попадёт в
+# каждый студенческий форк под именем .sourcecraft/ci.yaml (без .template).
+
+on:
+  push:
+    - workflows: grade
+
+workflows:
+  grade:
+    tasks:
+      - name: grade
+        cubes:
+          # Собираем параметры для shared workflow из predefined SC env-переменных.
+          - name: get-workflow-values
+            script:
+              - |
+                WORKFLOW_VALUES=$(printf '[{"name":"HTTPS_CLONE_URL","value":"%s"},{"name":"REF_NAME","value":"%s"},{"name":"USERNAME","value":"%s"}]' \
+                  "$SOURCECRAFT_REPO_URL" "$SOURCECRAFT_COMMIT_REF_NAME" "$SOURCECRAFT_USERNAME")
+                echo "WORKFLOW_VALUES=$WORKFLOW_VALUES" >> $SOURCECRAFT_ENV
+          # Вызываем shared workflow `grade` из приватного репо курса.
+          # REPO_SLUG замени на реальный slug вашего приватного репо.
+          - name: grade
+            env:
+              ORG_SLUG: hsemanytask
+              REPO_SLUG: ami-python-basic-private-26f
+              WORKFLOW_NAME: grade
+              TASK_NAME: grade
+              CUBE_NAME: grade
+              # ARTIFACT_LOCAL_PATH — путь В ПРИВАТНОМ workflow откуда брать
+              # артефакт. Сам cube всегда сохраняет как `artifacts/output`.
+              ARTIFACT_LOCAL_PATH: artifacts/public-output.txt
+            image: cr.yandex/sourcecraft/cubes/shared-workflows:latest
+            artifacts:
+              # cube кладёт скачанный артефакт именно сюда — фиксированный путь.
+              paths:
+                - artifacts/output
+          # Отчёт печатается в лог этой джобы, и по нему же определяется статус.
+          # Проверка в приватном репо всегда завершается успешно — иначе cube
+          # выше не отдал бы отчёт, — поэтому решение принимается здесь.
+          - name: check-result
+            script:
+              - |
+                if [ ! -f artifacts/output ]; then
+                  echo "Отчёт о проверке не получен. Обратитесь к преподавателю."
+                  exit 1
+                fi
+                cat artifacts/output
+                if ! grep -q "TESTING PASSED" artifacts/output; then
+                  echo
+                  echo "Проверка не пройдена."
+                  exit 1
+                fi
